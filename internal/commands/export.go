@@ -288,7 +288,7 @@ func exportPostman(api *models.API) string {
 		urlObject := map[string]interface{}{
 			"raw": fullURL,
 		}
-		
+
 		item := map[string]interface{}{
 			"name": endpoint.Description,
 			"request": map[string]interface{}{
