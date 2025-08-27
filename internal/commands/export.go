@@ -283,11 +283,17 @@ func exportPostman(api *models.API) string {
 	items := []interface{}{}
 
 	for _, endpoint := range api.Endpoints {
+		// Construct proper Postman URL object
+		fullURL := api.BaseURL + endpoint.Path
+		urlObject := map[string]interface{}{
+			"raw": fullURL,
+		}
+		
 		item := map[string]interface{}{
 			"name": endpoint.Description,
 			"request": map[string]interface{}{
 				"method": endpoint.Method,
-				"url":    api.BaseURL + endpoint.Path,
+				"url":    urlObject,
 				"header": []map[string]string{},
 			},
 		}
