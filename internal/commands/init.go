@@ -13,28 +13,63 @@ import (
 )
 
 func InitCmd() *cobra.Command {
-	return &cobra.Command{
+	cmd := &cobra.Command{
 		Use:   "init",
 		Short: "Initialize project specifications",
 		Long:  "Creates .architect/ directory with project specifications",
 		RunE:  runInit,
 	}
+
+	// Add flags for non-interactive mode
+	cmd.Flags().StringP("name", "n", "", "Project name")
+	cmd.Flags().StringP("description", "d", "", "Brief description")
+	cmd.Flags().String("backend", "FastAPI", "Tech stack backend (FastAPI, Express, Django, Spring Boot, Rails, Other)")
+	cmd.Flags().String("database", "PostgreSQL", "Database (PostgreSQL, MySQL, MongoDB, SQLite, Other)")
+	cmd.Flags().String("auth", "JWT Bearer", "Authentication type (JWT Bearer, API Key, OAuth2, Basic Auth, None)")
+	cmd.Flags().Bool("no-business-logic", false, "Skip adding business logic descriptions")
+	cmd.Flags().Bool("no-endpoints", false, "Skip adding API endpoints")
+	cmd.Flags().BoolP("force", "f", false, "Overwrite existing specifications without confirmation")
+	cmd.Flags().Bool("quiet", false, "Suppress output and use all defaults for missing flags")
+
+	return cmd
 }
 
 func runInit(cmd *cobra.Command, args []string) error {
-	color.Cyan("📋 Architect - Project Specification Setup")
-	fmt.Println("─────────────────────────────────────────\n")
+	// Get flag values
+	flagName, _ := cmd.Flags().GetString("name")
+	flagDescription, _ := cmd.Flags().GetString("description")
+	flagBackend, _ := cmd.Flags().GetString("backend")
+	flagDatabase, _ := cmd.Flags().GetString("database")
+	flagAuth, _ := cmd.Flags().GetString("auth")
+	flagNoBusinessLogic, _ := cmd.Flags().GetBool("no-business-logic")
+	flagNoEndpoints, _ := cmd.Flags().GetBool("no-endpoints")
+	flagForce, _ := cmd.Flags().GetBool("force")
+	flagQuiet, _ := cmd.Flags().GetBool("quiet")
+
+	// Determine if we're running in interactive mode
+	isInteractive := flagName == "" || flagDescription == ""
+
+	if !flagQuiet {
+		color.Cyan("📋 Architect - Project Specification Setup")
+		fmt.Println("─────────────────────────────────────────\n")
+	}
 
 	// Check if .architect already exists
 	if _, err := os.Stat(".architect"); err == nil {
-		color.Yellow("⚠️  .architect/ directory already exists")
-		overwrite := false
-		prompt := &survey.Confirm{
-			Message: "Do you want to overwrite existing specifications?",
-		}
-		survey.AskOne(prompt, &overwrite)
-		if !overwrite {
-			return nil
+		if flagForce {
+			// Force overwrite, no prompt needed
+		} else if isInteractive {
+			color.Yellow("⚠️  .architect/ directory already exists")
+			overwrite := false
+			prompt := &survey.Confirm{
+				Message: "Do you want to overwrite existing specifications?",
+			}
+			survey.AskOne(prompt, &overwrite)
+			if !overwrite {
+				return nil
+			}
+		} else {
+			return fmt.Errorf(".architect/ directory already exists. Use --force to overwrite")
 		}
 	}
 
@@ -44,84 +79,123 @@ func runInit(cmd *cobra.Command, args []string) error {
 		BaseURL: "/api/v1",
 	}
 
-	// Project questions
-	var qs = []*survey.Question{
-		{
-			Name:     "name",
-			Prompt:   &survey.Input{Message: "Project name:"},
-			Validate: survey.Required,
-		},
-		{
-			Name:     "description",
-			Prompt:   &survey.Input{Message: "Brief description:"},
-			Validate: survey.Required,
-		},
-		{
+	// Get project information from flags or interactive prompts
+	var projectName, projectDescription, backend, database, auth string
+
+	if isInteractive {
+		// Interactive mode - use surveys for missing information
+		var qs []*survey.Question
+
+		if flagName == "" {
+			qs = append(qs, &survey.Question{
+				Name:     "name",
+				Prompt:   &survey.Input{Message: "Project name:"},
+				Validate: survey.Required,
+			})
+		}
+
+		if flagDescription == "" {
+			qs = append(qs, &survey.Question{
+				Name:     "description",
+				Prompt:   &survey.Input{Message: "Brief description:"},
+				Validate: survey.Required,
+			})
+		}
+
+		// Always ask for optional fields in interactive mode if not provided
+		qs = append(qs, &survey.Question{
 			Name: "backend",
 			Prompt: &survey.Select{
 				Message: "Tech stack (backend):",
 				Options: []string{"FastAPI", "Express", "Django", "Spring Boot", "Rails", "Other"},
-				Default: "FastAPI",
+				Default: flagBackend,
 			},
-		},
-		{
+		})
+
+		qs = append(qs, &survey.Question{
 			Name: "database",
 			Prompt: &survey.Select{
 				Message: "Database:",
 				Options: []string{"PostgreSQL", "MySQL", "MongoDB", "SQLite", "Other"},
-				Default: "PostgreSQL",
+				Default: flagDatabase,
 			},
-		},
-		{
+		})
+
+		qs = append(qs, &survey.Question{
 			Name: "auth",
 			Prompt: &survey.Select{
 				Message: "Authentication type:",
 				Options: []string{"JWT Bearer", "API Key", "OAuth2", "Basic Auth", "None"},
-				Default: "JWT Bearer",
+				Default: flagAuth,
 			},
-		},
+		})
+
+		answers := make(map[string]interface{})
+		if err := survey.Ask(qs, &answers); err != nil {
+			return err
+		}
+
+		// Use answers or flags
+		if flagName != "" {
+			projectName = flagName
+		} else {
+			projectName = answers["name"].(string)
+		}
+
+		if flagDescription != "" {
+			projectDescription = flagDescription
+		} else {
+			projectDescription = answers["description"].(string)
+		}
+
+		backend = answers["backend"].(string)
+		database = answers["database"].(string)
+		auth = answers["auth"].(string)
+	} else {
+		// Non-interactive mode - use flags only
+		projectName = flagName
+		projectDescription = flagDescription
+		backend = flagBackend
+		database = flagDatabase
+		auth = flagAuth
 	}
 
-	answers := struct {
-		Name        string
-		Description string
-		Backend     string
-		Database    string
-		Auth        string
-	}{}
+	project.Name = projectName
+	project.Description = projectDescription
+	project.TechStack.Backend = backend
+	project.TechStack.Database = database
+	project.TechStack.Auth = auth
+	api.AuthType = convertAuthType(auth)
 
-	if err := survey.Ask(qs, &answers); err != nil {
-		return err
-	}
-
-	project.Name = answers.Name
-	project.Description = answers.Description
-	project.TechStack.Backend = answers.Backend
-	project.TechStack.Database = answers.Database
-	project.TechStack.Auth = answers.Auth
-	api.AuthType = convertAuthType(answers.Auth)
-
-	// Ask about business logic
+	// Handle business logic
 	addBusinessLogic := false
-	prompt := &survey.Confirm{
-		Message: "Would you like to add business logic descriptions?",
-		Default: true,
+	if !flagNoBusinessLogic {
+		if isInteractive && !flagQuiet {
+			prompt := &survey.Confirm{
+				Message: "Would you like to add business logic descriptions?",
+				Default: true,
+			}
+			survey.AskOne(prompt, &addBusinessLogic)
+		}
 	}
-	survey.AskOne(prompt, &addBusinessLogic)
 
-	if addBusinessLogic {
+	if addBusinessLogic && !flagQuiet {
 		project.BusinessLogic = collectBusinessLogic()
 	}
 
-	// Ask about API endpoints
+	// Handle API endpoints
 	addEndpoints := false
-	endpointPrompt := &survey.Confirm{
-		Message: "Would you like to add API endpoints now?",
-		Default: true,
+	if !flagNoEndpoints {
+		if isInteractive && !flagQuiet {
+			endpointPrompt := &survey.Confirm{
+				Message: "Would you like to add API endpoints now?",
+				Default: true,
+			}
+			survey.AskOne(endpointPrompt, &addEndpoints)
+		}
 	}
-	survey.AskOne(endpointPrompt, &addEndpoints)
 
-	if addEndpoints {
+	if addEndpoints && !flagQuiet {
 		api.Endpoints = collectEndpoints()
 	}
 
@@ -139,7 +213,9 @@ func runInit(cmd *cobra.Command, args []string) error {
 	if err := os.WriteFile(".architect/project.md", []byte(projectMD), 0644); err != nil {
 		return fmt.Errorf("failed to write project.md: %w", err)
 	}
-	color.Green("✅ Created .architect/project.md")
+	if !flagQuiet {
+		color.Green("✅ Created .architect/project.md")
+	}
 
 	// Save api.yaml
 	apiData, err := yaml.Marshal(api)
@@ -149,7 +225,9 @@ func runInit(cmd *cobra.Command, args []string) error {
 	if err := os.WriteFile(".architect/api.yaml", apiData, 0644); err != nil {
 		return fmt.Errorf("failed to write api.yaml: %w", err)
 	}
-	color.Green("✅ Created .architect/api.yaml")
+	if !flagQuiet {
+		color.Green("✅ Created .architect/api.yaml")
+	}
 
 	// Generate cursor rules
 	gen := generator.New(project, api)
@@ -157,10 +235,12 @@ func runInit(cmd *cobra.Command, args []string) error {
 	if err := os.WriteFile(".cursor/rules/architect.mdc", []byte(rules), 0644); err != nil {
 		return fmt.Errorf("failed to write cursor rules: %w", err)
 	}
-	color.Green("✅ Created .cursor/rules/architect.mdc")
+	if !flagQuiet {
+		color.Green("✅ Created .cursor/rules/architect.mdc")
 
-	color.Green("\n🎉 Project specifications initialized!")
-	fmt.Println("Next step: Start coding with your AI assistant - it will follow your specs automatically.")
+		color.Green("\n🎉 Project specifications initialized!")
+		fmt.Println("Next step: Start coding with your AI assistant - it will follow your specs automatically.")
+	}
 
 	return nil
 }
