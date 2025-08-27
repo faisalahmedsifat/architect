@@ -22,6 +22,7 @@ exact API contracts and business logic.`,
 
 	// Add commands
 	rootCmd.AddCommand(commands.InitCmd())
+	rootCmd.AddCommand(commands.ImportCmd())
 	rootCmd.AddCommand(commands.SyncCmd())
 	rootCmd.AddCommand(commands.AddEndpointCmd())
 	rootCmd.AddCommand(commands.ValidateCmd())
