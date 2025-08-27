@@ -1,0 +1,223 @@
+# Sample Architect API Specification
+# This demonstrates the native Architect YAML format
+
+base_url: /api/v1
+auth_type: bearer
+endpoints:
+  - path: /auth/register
+    method: POST
+    description: Register a new user account
+    auth: false
+    request:
+      body:
+        email: string,required,email
+        password: string,required,min:8
+        name: string,required
+    response:
+      status: 201
+      body:
+        id: uuid
+        email: string
+        name: string
+        created_at: datetime
+    errors:
+      - status: 400
+        code: VALIDATION_ERROR
+        message: Invalid input data
+      - status: 409
+        code: EMAIL_EXISTS
+        message: Email already registered
+
+  - path: /auth/login
+    method: POST
+    description: Authenticate user and return JWT token
+    auth: false
+    request:
+      body:
+        email: string,required,email
+        password: string,required
+    response:
+      status: 200
+      body:
+        token: string
+        expires_in: integer
+        user:
+          id: uuid
+          email: string
+          name: string
+    errors:
+      - status: 401
+        code: INVALID_CREDENTIALS
+        message: Invalid email or password
+      - status: 429
+        code: RATE_LIMITED
+        message: Too many login attempts
+
+  - path: /users/profile
+    method: GET
+    description: Get current user's profile
+    auth: true
+    response:
+      status: 200
+      body:
+        id: uuid
+        email: string
+        name: string
+        avatar_url: string
+        created_at: datetime
+        updated_at: datetime
+    errors:
+      - status: 401
+        code: UNAUTHORIZED
+        message: Authentication required
+
+  - path: /users/profile
+    method: PUT
+    description: Update current user's profile
+    auth: true
+    request:
+      body:
+        name: string
+        avatar_url: string
+    response:
+      status: 200
+      body:
+        id: uuid
+        email: string
+        name: string
+        avatar_url: string
+        updated_at: datetime
+    errors:
+      - status: 401
+        code: UNAUTHORIZED
+        message: Authentication required
+      - status: 400
+        code: VALIDATION_ERROR
+        message: Invalid input data
+
+  - path: /projects
+    method: GET
+    description: List user's projects with pagination
+    auth: true
+    request:
+      query:
+        page: integer,min:1,default:1
+        limit: integer,min:1,max:100,default:20
+        search: string
+    response:
+      status: 200
+      body:
+        projects: array
+        pagination:
+          page: integer
+          limit: integer
+          total: integer
+          pages: integer
+    errors:
+      - status: 401
+        code: UNAUTHORIZED
+        message: Authentication required
+
+  - path: /projects
+    method: POST
+    description: Create a new project
+    auth: true
+    request:
+      body:
+        name: string,required,max:100
+        description: string,max:500
+        is_public: boolean,default:false
+    response:
+      status: 201
+      body:
+        id: uuid
+        name: string
+        description: string
+        is_public: boolean
+        owner_id: uuid
+        created_at: datetime
+    errors:
+      - status: 401
+        code: UNAUTHORIZED
+        message: Authentication required
+      - status: 400
+        code: VALIDATION_ERROR
+        message: Invalid project data
+
+  - path: /projects/{project_id}
+    method: GET
+    description: Get project details
+    auth: true
+    request:
+      params:
+        project_id: uuid,required
+    response:
+      status: 200
+      body:
+        id: uuid
+        name: string
+        description: string
+        is_public: boolean
+        owner_id: uuid
+        created_at: datetime
+        updated_at: datetime
+    errors:
+      - status: 401
+        code: UNAUTHORIZED
+        message: Authentication required
+      - status: 404
+        code: PROJECT_NOT_FOUND
+        message: Project not found
+      - status: 403
+        code: ACCESS_DENIED
+        message: Access denied to this project
+
+  - path: /projects/{project_id}
+    method: PUT
+    description: Update project details
+    auth: true
+    request:
+      params:
+        project_id: uuid,required
+      body:
+        name: string,max:100
+        description: string,max:500
+        is_public: boolean
+    response:
+      status: 200
+      body:
+        id: uuid
+        name: string
+        description: string
+        is_public: boolean
+        updated_at: datetime
+    errors:
+      - status: 401
+        code: UNAUTHORIZED
+        message: Authentication required
+      - status: 404
+        code: PROJECT_NOT_FOUND
+        message: Project not found
+      - status: 403
+        code: ACCESS_DENIED
+        message: Access denied to this project
+
+  - path: /projects/{project_id}
+    method: DELETE
+    description: Delete a project
+    auth: true
+    request:
+      params:
+        project_id: uuid,required
+    response:
+      status: 204
+    errors:
+      - status: 401
+        code: UNAUTHORIZED
+        message: Authentication required
+      - status: 404
+        code: PROJECT_NOT_FOUND
+        message: Project not found
+      - status: 403
+        code: ACCESS_DENIED
+        message: Access denied to this project

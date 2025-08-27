@@ -1,0 +1,424 @@
+# E-commerce API Example
+# This demonstrates a complete e-commerce API specification in Architect format
+
+base_url: /api/v1
+auth_type: bearer
+endpoints:
+  # Authentication Endpoints
+  - path: /auth/register
+    method: POST
+    description: Register a new customer account
+    auth: false
+    request:
+      body:
+        email: string,required,email
+        password: string,required,min:8
+        first_name: string,required,max:50
+        last_name: string,required,max:50
+        phone: string,phone
+    response:
+      status: 201
+      body:
+        id: uuid
+        email: string
+        first_name: string
+        last_name: string
+        created_at: datetime
+    errors:
+      - status: 400
+        code: VALIDATION_ERROR
+        message: Invalid registration data
+      - status: 409
+        code: EMAIL_EXISTS
+        message: Email already registered
+
+  - path: /auth/login
+    method: POST
+    description: Authenticate customer and return access token
+    auth: false
+    request:
+      body:
+        email: string,required,email
+        password: string,required
+    response:
+      status: 200
+      body:
+        access_token: string
+        refresh_token: string
+        expires_in: integer
+        customer:
+          id: uuid
+          email: string
+          first_name: string
+          last_name: string
+    errors:
+      - status: 401
+        code: INVALID_CREDENTIALS
+        message: Invalid email or password
+
+  # Product Catalog
+  - path: /products
+    method: GET
+    description: List products with filtering and pagination
+    auth: false
+    request:
+      query:
+        page: integer,min:1,default:1
+        limit: integer,min:1,max:100,default:20
+        category: string
+        price_min: number,min:0
+        price_max: number,min:0
+        search: string
+        sort: string,enum:price_asc|price_desc|name_asc|name_desc|created_desc
+    response:
+      status: 200
+      body:
+        products: array
+        pagination:
+          page: integer
+          limit: integer
+          total: integer
+          pages: integer
+        filters:
+          categories: array
+          price_range:
+            min: number
+            max: number
+
+  - path: /products/{product_id}
+    method: GET
+    description: Get detailed product information
+    auth: false
+    request:
+      params:
+        product_id: uuid,required
+    response:
+      status: 200
+      body:
+        id: uuid
+        name: string
+        description: string
+        price: number
+        currency: string
+        category: object
+        images: array
+        specifications: object
+        stock_quantity: integer
+        is_available: boolean
+        created_at: datetime
+        updated_at: datetime
+    errors:
+      - status: 404
+        code: PRODUCT_NOT_FOUND
+        message: Product not found
+
+  # Shopping Cart
+  - path: /cart
+    method: GET
+    description: Get current customer's shopping cart
+    auth: true
+    response:
+      status: 200
+      body:
+        id: uuid
+        items: array
+        subtotal: number
+        tax: number
+        shipping: number
+        total: number
+        currency: string
+        updated_at: datetime
+
+  - path: /cart/items
+    method: POST
+    description: Add item to shopping cart
+    auth: true
+    request:
+      body:
+        product_id: uuid,required
+        quantity: integer,required,min:1
+        options: object
+    response:
+      status: 201
+      body:
+        item_id: uuid
+        product: object
+        quantity: integer
+        unit_price: number
+        total_price: number
+    errors:
+      - status: 400
+        code: INVALID_QUANTITY
+        message: Invalid quantity specified
+      - status: 404
+        code: PRODUCT_NOT_FOUND
+        message: Product not found
+      - status: 409
+        code: INSUFFICIENT_STOCK
+        message: Not enough items in stock
+
+  - path: /cart/items/{item_id}
+    method: PUT
+    description: Update cart item quantity
+    auth: true
+    request:
+      params:
+        item_id: uuid,required
+      body:
+        quantity: integer,required,min:1
+    response:
+      status: 200
+      body:
+        item_id: uuid
+        quantity: integer
+        unit_price: number
+        total_price: number
+
+  - path: /cart/items/{item_id}
+    method: DELETE
+    description: Remove item from cart
+    auth: true
+    request:
+      params:
+        item_id: uuid,required
+    response:
+      status: 204
+
+  # Order Management
+  - path: /orders
+    method: GET
+    description: List customer's orders
+    auth: true
+    request:
+      query:
+        page: integer,min:1,default:1
+        limit: integer,min:1,max:50,default:10
+        status: string,enum:pending|confirmed|shipped|delivered|cancelled
+    response:
+      status: 200
+      body:
+        orders: array
+        pagination:
+          page: integer
+          limit: integer
+          total: integer
+          pages: integer
+
+  - path: /orders
+    method: POST
+    description: Create new order from cart
+    auth: true
+    request:
+      body:
+        shipping_address: object,required
+        billing_address: object
+        payment_method: string,required
+        notes: string,max:500
+    response:
+      status: 201
+      body:
+        id: uuid
+        order_number: string
+        status: string
+        items: array
+        subtotal: number
+        tax: number
+        shipping: number
+        total: number
+        currency: string
+        shipping_address: object
+        billing_address: object
+        created_at: datetime
+    errors:
+      - status: 400
+        code: EMPTY_CART
+        message: Cart is empty
+      - status: 400
+        code: INVALID_ADDRESS
+        message: Invalid shipping or billing address
+      - status: 402
+        code: PAYMENT_FAILED
+        message: Payment processing failed
+
+  - path: /orders/{order_id}
+    method: GET
+    description: Get detailed order information
+    auth: true
+    request:
+      params:
+        order_id: uuid,required
+    response:
+      status: 200
+      body:
+        id: uuid
+        order_number: string
+        status: string
+        items: array
+        subtotal: number
+        tax: number
+        shipping: number
+        total: number
+        currency: string
+        shipping_address: object
+        billing_address: object
+        tracking_number: string
+        created_at: datetime
+        updated_at: datetime
+    errors:
+      - status: 404
+        code: ORDER_NOT_FOUND
+        message: Order not found
+      - status: 403
+        code: ACCESS_DENIED
+        message: Access denied to this order
+
+  # Customer Profile
+  - path: /profile
+    method: GET
+    description: Get customer profile information
+    auth: true
+    response:
+      status: 200
+      body:
+        id: uuid
+        email: string
+        first_name: string
+        last_name: string
+        phone: string
+        avatar_url: string
+        addresses: array
+        preferences: object
+        created_at: datetime
+
+  - path: /profile
+    method: PUT
+    description: Update customer profile
+    auth: true
+    request:
+      body:
+        first_name: string,max:50
+        last_name: string,max:50
+        phone: string,phone
+        preferences: object
+    response:
+      status: 200
+      body:
+        id: uuid
+        email: string
+        first_name: string
+        last_name: string
+        phone: string
+        preferences: object
+        updated_at: datetime
+
+  # Addresses
+  - path: /addresses
+    method: GET
+    description: List customer's saved addresses
+    auth: true
+    response:
+      status: 200
+      body:
+        addresses: array
+
+  - path: /addresses
+    method: POST
+    description: Add new address
+    auth: true
+    request:
+      body:
+        type: string,required,enum:shipping|billing|both
+        first_name: string,required,max:50
+        last_name: string,required,max:50
+        company: string,max:100
+        address_line1: string,required,max:100
+        address_line2: string,max:100
+        city: string,required,max:50
+        state: string,required,max:50
+        postal_code: string,required,max:20
+        country: string,required,max:2
+        phone: string,phone
+        is_default: boolean,default:false
+    response:
+      status: 201
+      body:
+        id: uuid
+        type: string
+        first_name: string
+        last_name: string
+        company: string
+        address_line1: string
+        address_line2: string
+        city: string
+        state: string
+        postal_code: string
+        country: string
+        phone: string
+        is_default: boolean
+
+  # Categories
+  - path: /categories
+    method: GET
+    description: List product categories
+    auth: false
+    response:
+      status: 200
+      body:
+        categories: array
+
+  - path: /categories/{category_id}/products
+    method: GET
+    description: List products in a specific category
+    auth: false
+    request:
+      params:
+        category_id: uuid,required
+      query:
+        page: integer,min:1,default:1
+        limit: integer,min:1,max:100,default:20
+        sort: string,enum:price_asc|price_desc|name_asc|name_desc|created_desc
+    response:
+      status: 200
+      body:
+        category: object
+        products: array
+        pagination:
+          page: integer
+          limit: integer
+          total: integer
+          pages: integer
+
+  # Wishlist
+  - path: /wishlist
+    method: GET
+    description: Get customer's wishlist
+    auth: true
+    response:
+      status: 200
+      body:
+        items: array
+        updated_at: datetime
+
+  - path: /wishlist/items
+    method: POST
+    description: Add product to wishlist
+    auth: true
+    request:
+      body:
+        product_id: uuid,required
+    response:
+      status: 201
+      body:
+        item_id: uuid
+        product: object
+        added_at: datetime
+
+  - path: /wishlist/items/{item_id}
+    method: DELETE
+    description: Remove product from wishlist
+    auth: true
+    request:
+      params:
+        item_id: uuid,required
+    response:
+      status: 204
