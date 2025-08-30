@@ -17,14 +17,14 @@ type Endpoint struct {
 }
 
 type EndpointRequest struct {
-	Params map[string]string `yaml:"params,omitempty"`
-	Query  map[string]string `yaml:"query,omitempty"`
-	Body   map[string]string `yaml:"body,omitempty"`
+	Params map[string]interface{} `yaml:"params,omitempty"`
+	Query  map[string]interface{} `yaml:"query,omitempty"`
+	Body   map[string]interface{} `yaml:"body,omitempty"`
 }
 
 type EndpointResponse struct {
-	Status int               `yaml:"status"`
-	Body   map[string]string `yaml:"body,omitempty"`
+	Status int                    `yaml:"status"`
+	Body   map[string]interface{} `yaml:"body,omitempty"`
 }
 
 type ErrorResponse struct {

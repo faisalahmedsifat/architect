@@ -169,7 +169,7 @@ func buildRequestBody(request *models.EndpointRequest) map[string]interface{} {
 	}
 }
 
-func buildSchema(fields map[string]string) map[string]interface{} {
+func buildSchema(fields map[string]interface{}) map[string]interface{} {
 	schema := map[string]interface{}{
 		"type":       "object",
 		"properties": make(map[string]interface{}),
@@ -180,7 +180,12 @@ func buildSchema(fields map[string]string) map[string]interface{} {
 	required := []string{}
 
 	for field, def := range fields {
-		parts := strings.Split(def, ",")
+		// Simple field type parsing - convert interface{} to string
+		defStr, ok := def.(string)
+		if !ok {
+			continue // Skip non-string field definitions
+		}
+		parts := strings.Split(defStr, ",")
 		fieldType := strings.TrimSpace(parts[0])
 
 		props[field] = map[string]string{

@@ -196,9 +196,9 @@ func (i *OpenAPIImporter) convertOperation(path, method string, operation OpenAP
 	// Convert request parameters and body
 	if operation.RequestBody != nil || len(operation.Parameters) > 0 {
 		endpoint.Request = &models.EndpointRequest{
-			Params: make(map[string]string),
-			Query:  make(map[string]string),
-			Body:   make(map[string]string),
+			Params: make(map[string]interface{}),
+			Query:  make(map[string]interface{}),
+			Body:   make(map[string]interface{}),
 		}
 
 		// Handle parameters
@@ -288,8 +288,8 @@ func (i *OpenAPIImporter) convertSchemaType(schema interface{}) string {
 }
 
 // extractSchemaFields extracts field definitions from content schemas
-func (i *OpenAPIImporter) extractSchemaFields(content map[string]OpenAPIMediaType) map[string]string {
-	fields := make(map[string]string)
+func (i *OpenAPIImporter) extractSchemaFields(content map[string]OpenAPIMediaType) map[string]interface{} {
+	fields := make(map[string]interface{})
 
 	// Look for application/json content first
 	for contentType, mediaType := range content {
@@ -311,8 +311,8 @@ func (i *OpenAPIImporter) extractSchemaFields(content map[string]OpenAPIMediaTyp
 }
 
 // parseSchemaProperties recursively parses schema properties
-func (i *OpenAPIImporter) parseSchemaProperties(schema interface{}) map[string]string {
-	fields := make(map[string]string)
+func (i *OpenAPIImporter) parseSchemaProperties(schema interface{}) map[string]interface{} {
+	fields := make(map[string]interface{})
 
 	if schemaMap, ok := schema.(map[string]interface{}); ok {
 		if properties, exists := schemaMap["properties"]; exists {

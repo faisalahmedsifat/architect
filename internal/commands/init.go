@@ -361,8 +361,8 @@ func collectEndpoints() []models.Endpoint {
 	return endpoints
 }
 
-func collectFields(context string) map[string]string {
-	fields := make(map[string]string)
+func collectFields(context string) map[string]interface{} {
+	fields := make(map[string]interface{})
 
 	for {
 		var fieldName, fieldType string

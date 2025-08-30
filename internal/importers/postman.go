@@ -223,9 +223,9 @@ func (i *PostmanImporter) convertRequest(item PostmanItem, collection *PostmanCo
 
 		// Handle path parameters
 		endpoint.Request = &models.EndpointRequest{
-			Params: make(map[string]string),
-			Query:  make(map[string]string),
-			Body:   make(map[string]string),
+			Params: make(map[string]interface{}),
+			Query:  make(map[string]interface{}),
+			Body:   make(map[string]interface{}),
 		}
 
 		// Extract path variables
@@ -249,9 +249,9 @@ func (i *PostmanImporter) convertRequest(item PostmanItem, collection *PostmanCo
 	if request.Body != nil && endpoint.Method != "GET" && endpoint.Method != "DELETE" {
 		if endpoint.Request == nil {
 			endpoint.Request = &models.EndpointRequest{
-				Params: make(map[string]string),
-				Query:  make(map[string]string),
-				Body:   make(map[string]string),
+				Params: make(map[string]interface{}),
+				Query:  make(map[string]interface{}),
+				Body:   make(map[string]interface{}),
 			}
 		}
 
@@ -264,7 +264,7 @@ func (i *PostmanImporter) convertRequest(item PostmanItem, collection *PostmanCo
 	// Set default response for all endpoints
 	endpoint.Response = &models.EndpointResponse{
 		Status: 200,
-		Body:   make(map[string]string),
+		Body:   make(map[string]interface{}),
 	}
 
 	// Adjust status code for POST requests
@@ -533,8 +533,8 @@ func (i *PostmanImporter) requestRequiresAuth(request *PostmanRequest, collectio
 }
 
 // parseRequestBody parses Postman request body into field definitions
-func (i *PostmanImporter) parseRequestBody(body *PostmanBody) map[string]string {
-	fields := make(map[string]string)
+func (i *PostmanImporter) parseRequestBody(body *PostmanBody) map[string]interface{} {
+	fields := make(map[string]interface{})
 
 	switch body.Mode {
 	case "raw":
@@ -573,8 +573,8 @@ func (i *PostmanImporter) parseRequestBody(body *PostmanBody) map[string]string 
 }
 
 // parseJSONBody attempts to parse JSON body and extract field types
-func (i *PostmanImporter) parseJSONBody(rawBody string) map[string]string {
-	fields := make(map[string]string)
+func (i *PostmanImporter) parseJSONBody(rawBody string) map[string]interface{} {
+	fields := make(map[string]interface{})
 
 	// Try to parse as JSON
 	var jsonData map[string]interface{}

@@ -113,8 +113,8 @@ func runAddEndpoint(cmd *cobra.Command, args []string) error {
 	return runSync(cmd, args)
 }
 
-func collectEndpointFields(context string) map[string]string {
-	fields := make(map[string]string)
+func collectEndpointFields(context string) map[string]interface{} {
+	fields := make(map[string]interface{})
 
 	for {
 		var fieldName string
